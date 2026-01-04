@@ -1,23 +1,23 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 )
 
 type KafkaService interface {
-    sendOrder(v any) error 
+    SendOrder(v []byte) error 
 }
 
 type ProducerHandler struct {
-    kfk KafkaService
+    service KafkaService
 }
 
 func NewProducerHandler(kfk KafkaService) *ProducerHandler {
     return &ProducerHandler{
-        kfk: kfk,
+        service: kfk,
     }
 }
 
@@ -26,22 +26,16 @@ func (p *ProducerHandler) RegisterRoutes(router *http.ServeMux) {
 }
 
 func (p *ProducerHandler) createOrder(w http.ResponseWriter, r *http.Request) {
-    order := struct {
-       Name string
-       Amount int
-    }{}
-    if err := decodeJSON(r, &order); err != nil {
+    order, err := io.ReadAll(r.Body)
+    if err != nil {
         http.Error(w, "Something went wrong!", http.StatusBadRequest)
-        log.Printf("createOrder, err: %v\n", err)
+        log.Printf("createOrder -> ReadAll, err: %v\n", err)
         return
     }
-    fmt.Println(order)
-    p.kfk.sendOrder(order)
-}
-
-func decodeJSON(r *http.Request, v any) error {
-    if r.Body == nil {
-        return fmt.Errorf("The body is nil!")
+    fmt.Println(string(order))
+    if err := p.service.SendOrder(order); err != nil {
+        http.Error(w, "Something went wrong!", http.StatusBadRequest)
+        log.Printf("createOrder -> SendOrder, err: %v\n", err)
+        return
     }
-    return json.NewDecoder(r.Body).Decode(v)
 }
