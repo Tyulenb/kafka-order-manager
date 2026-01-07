@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+    "go.uber.org/zap"
 )
 
 type KafkaService interface {
@@ -13,11 +14,13 @@ type KafkaService interface {
 
 type ProducerHandler struct {
     service KafkaService
+    logger *zap.Logger
 }
 
-func NewProducerHandler(kfk KafkaService) *ProducerHandler {
+func NewProducerHandler(kfk KafkaService, logger *zap.Logger) *ProducerHandler {
     return &ProducerHandler{
         service: kfk,
+        logger: logger,
     }
 }
 
